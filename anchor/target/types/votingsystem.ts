@@ -214,6 +214,13 @@ export type Votingsystem = {
       ]
     }
   ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "alreadyVoted",
+      "msg": "already voted"
+    }
+  ],
   "types": [
     {
       "name": "candidate",
@@ -255,6 +262,12 @@ export type Votingsystem = {
           {
             "name": "candidateAmount",
             "type": "u64"
+          },
+          {
+            "name": "voters",
+            "type": {
+              "vec": "pubkey"
+            }
           }
         ]
       }

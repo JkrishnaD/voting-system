@@ -1,7 +1,7 @@
 import { Votingsystem } from "./../target/types/votingsystem";
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { BankrunProvider, startAnchor } from "anchor-bankrun";
 
 const IDL = require("../target/idl/votingsystem.json");
@@ -14,6 +14,8 @@ describe("votingsystem", () => {
   let context;
   let provider: BankrunProvider;
   let votingProgram: Program<Votingsystem>;
+  let voter1: Keypair;
+  let voter2: Keypair;
 
   beforeAll(async () => {
     context = await startAnchor(
@@ -23,7 +25,10 @@ describe("votingsystem", () => {
     );
     provider = new BankrunProvider(context);
     votingProgram = new Program<Votingsystem>(IDL, provider);
+    voter1 = anchor.web3.Keypair.generate();
+    voter2 = anchor.web3.Keypair.generate();
   });
+
   it("Initialize poll", async () => {
     await votingProgram.methods
       .startPoll(
@@ -79,9 +84,28 @@ describe("votingsystem", () => {
   });
 
   it("vote", async () => {
-    await votingProgram.methods.vote("Thalapathy", new anchor.BN(1)).rpc();
-    await votingProgram.methods.vote("Thalapathy", new anchor.BN(1)).rpc();
-    await votingProgram.methods.vote("Thala", new anchor.BN(1)).rpc();
+    await votingProgram.methods
+      .vote("Thalapathy", new anchor.BN(1))
+      .accounts({
+        user: voter1.publicKey,
+      })
+      .signers([voter1])
+      .rpc();
+    await votingProgram.methods
+      .vote("Thalapathy", new anchor.BN(1))
+      .accounts({
+        user: voter2.publicKey,
+      })
+      .signers([voter2])
+      .rpc();
+    // this following will throw an error because the voter2 has already voted
+    // await votingProgram.methods
+    //   .vote("Thala", new anchor.BN(1))
+    //   .accounts({
+    //     user: voter2.publicKey,
+    //   })
+    //   .signers([voter2])
+    //   .rpc();
 
     const [thalapathyAddress] = PublicKey.findProgramAddressSync(
       [
@@ -93,6 +117,8 @@ describe("votingsystem", () => {
     const thalapathy = await votingProgram.account.candidate.fetch(
       thalapathyAddress
     );
+
+    expect(thalapathy.candidateVotes.toNumber()).toEqual(2);
     console.log(thalapathy);
   });
 });
